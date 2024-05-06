@@ -1,0 +1,12 @@
+# Ignore the virtual environment:
+env/
+
+# Ignore Python byte-compiled files:
+__pycache__/
+*.pyc
+
+# Optional: Ignore other common directories that should not be tracked
+*.log
+*.csv
+*.dat
+.DS_Store
