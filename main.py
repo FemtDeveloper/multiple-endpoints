@@ -33,14 +33,6 @@ client = OpenAI()
 llm_model = "gpt-3.5-turbo"
 
 
-def get_completion(prompt: str, model=llm_model):
-    messages = [{"role": "user", "content": prompt}]
-    response = client.chat.completions.create(
-        model=model, messages=messages, temperature=0  # type: ignore
-    )  # type:ignore
-    print(response.choices[0].message.content)
-
-
 # get_completion("What is 1+1?")
 
 
@@ -59,11 +51,19 @@ that is delimited by triple backticks
 into a style that is {style}.
 text: ```{customer_email}```
 """
-get_completion(prompt)
 # response = get_completion(prompt)
 
 
 # print(response)
+
+
+@app.get("/chatgpt-response")
+async def get_completion(prompt: str, model=llm_model):
+    messages = [{"role": "user", "content": prompt}]
+    response = client.chat.completions.create(
+        model=model, messages=messages, temperature=0  # type: ignore
+    )  # type:ignore
+    print(response.choices[0].message.content)
 
 
 @app.post("/images/upload")
