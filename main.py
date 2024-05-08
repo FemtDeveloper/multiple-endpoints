@@ -1,10 +1,17 @@
 import io
+import logging
 import os
 
-from fastapi import FastAPI, File, UploadFile
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from openai import OpenAI
 from rembg import remove
+
+client = OpenAI()
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -19,6 +26,9 @@ async def root():
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
+service_region = "eastus"
+subscription_key = os.getenv("SPEECH_KEY")
+endpoint = os.getenv("AZURE_ENDPOINT")
 #
 
 llm = ChatOpenAI()
@@ -31,39 +41,6 @@ _ = load_dotenv(find_dotenv())  # read local .env file
 client = OpenAI()
 
 llm_model = "gpt-3.5-turbo"
-
-
-# get_completion("What is 1+1?")
-
-
-customer_email = """
-Arrr, I be fuming that me blender lid \
-flew off and splattered me kitchen walls \
-with smoothie! And to make matters worse,\
-the warranty don't cover the cost of \
-cleaning up me kitchen. I need yer help \
-right now, matey!
-"""
-style = """Colombian Paisa in a angry and disrespectful tone"""
-
-prompt = f"""Translate the text \
-that is delimited by triple backticks
-into a style that is {style}.
-text: ```{customer_email}```
-"""
-# response = get_completion(prompt)
-
-
-# print(response)
-
-
-@app.get("/chatgpt-response")
-async def get_completion(prompt: str, model=llm_model):
-    messages = [{"role": "user", "content": prompt}]
-    response = client.chat.completions.create(
-        model=model, messages=messages, temperature=0  # type: ignore
-    )  # type:ignore
-    print(response.choices[0].message.content)
 
 
 @app.post("/images/upload")
@@ -83,3 +60,26 @@ async def remove_bg(file: UploadFile = File(...)):
         media_type="image/png",
         headers={"Content-Disposition": "attachment; filename=removed_image.png"},
     )
+
+
+@app.post("/resume-reclamation")
+async def resume_reclamation(file: UploadFile = File(...)):
+    if file.content_type.startswith("audio/"):  # type: ignore
+        temp_file_path = f"temp_{file.filename}"
+        with open(temp_file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        audio_file = open(temp_file_path, "rb")
+        try:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1", file=audio_file, language="es"
+            )
+
+            return {"transcription": transcription.text}
+
+        except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    else:
+        raise HTTPException(status_code=400, detail="Only audio files are accepted")
